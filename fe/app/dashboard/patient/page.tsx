@@ -20,7 +20,8 @@ import {
   History,
   Users,
   Settings,
-  X
+  X,
+  ShieldAlert
 } from "lucide-react"
 import { patients, medicalRecords, doctors, insuranceCompanies, getPatientRecords, Patient, MedicalRecord, accessPermissions } from "@/lib/dummy-data"
 import AccessControl from "@/components/access-control"
@@ -28,6 +29,58 @@ import DocumentViewHistory from "@/components/document-view-history"
 import TransactionHistoryView from "@/components/transaction-history"
 import PeerAccessManagement from "@/components/peer-access-management"
 import Navbar from "@/components/navbar"
+
+// Healthcare Icons for background particles (matching hero section)
+const HealthcareIcons = {
+  heart: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </svg>
+  ),
+  pulse: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M3 13h4l3-8 3 12 3-4h5v-2h-4l-2 2.5-3.5-10.5L8.5 15H3z"/>
+    </svg>
+  ),
+  shield: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+    </svg>
+  ),
+  medical: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z"/>
+    </svg>
+  ),
+}
+
+const healthIcons = Object.values(HealthcareIcons)
+const blueShades = ['#60A5FA', '#3B82F6', '#2563EB', '#1D4ED8', '#1E40AF', '#93C5FD', '#BFDBFE', '#DBEAFE']
+
+const createDeterministicParticles = (count: number, seed: number) => {
+  const particles = []
+  for (let i = 0; i < count; i++) {
+    const x = ((Math.sin(i * 12.9898 + seed) * 43758.5453) % 1) * 100
+    const y = ((Math.cos(i * 78.233 + seed) * 43758.5453) % 1) * 100
+    const size = 16 + ((Math.sin(i * 7.91 + seed) * 43758.5453) % 1) * 24
+    const animationOffset = ((Math.sin(i * 15.23 + seed) * 43758.5453) % 1) * 100
+    const iconIndex = Math.floor(Math.abs(Math.sin(i * 9.87 + seed) * 43758.5453) % healthIcons.length)
+    const colorIndex = Math.floor(Math.abs(Math.sin(i * 6.54 + seed) * 43758.5453) % blueShades.length)
+    
+    particles.push({
+      id: i,
+      left: Math.abs(x),
+      top: Math.abs(y),
+      size: Math.abs(size),
+      animationOffset: Math.abs(animationOffset),
+      icon: healthIcons[iconIndex],
+      color: blueShades[colorIndex]
+    })
+  }
+  return particles
+}
+
+const healthParticles = createDeterministicParticles(20, 2)
 
 export default function PatientDashboard() {
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
@@ -110,8 +163,43 @@ export default function PatientDashboard() {
   return (
     <>
       <Navbar userEmail={currentPatient.email} userRole="Patient" />
-      <div className="min-h-screen bg-gradient-to-br from-[#0B0F0E] via-[#0F2E28] to-[#0B0F0E]">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-[#0B0F0E] via-[#0F2E28] to-[#0B0F0E] relative overflow-hidden">
+        {/* Animated Healthcare Icon Particles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {healthParticles.map((particle) => (
+            <motion.div
+              key={`health-${particle.id}`}
+              className="absolute"
+              style={{
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                width: `${particle.size}px`,
+                height: `${particle.size}px`,
+                color: particle.color,
+                opacity: 0.15,
+                filter: `drop-shadow(0 0 3px ${particle.color})`,
+              }}
+              animate={{
+                y: [-30, 30, -30],
+                x: [-10, 10, -10],
+                rotate: [0, 15, -15, 0],
+                opacity: [0.1, 0.25, 0.1],
+                scale: [0.9, 1.1, 0.9],
+              }}
+              transition={{
+                duration: 10 + (particle.animationOffset * 0.08),
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+                delay: particle.animationOffset * 0.05,
+                ease: "easeInOut",
+              }}
+            >
+              {particle.icon}
+            </motion.div>
+          ))}
+        </div>
+        
+        <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
         <motion.div
           className="mb-8"
@@ -146,7 +234,83 @@ export default function PatientDashboard() {
               </div>
               <div>
                 <p className="text-white/60 text-sm">Allergies</p>
-                <p className="text-white font-semibold">{currentPatient.allergies.join(", ")}</p>
+                <p className="text-white font-semibold">{currentPatient.allergies && currentPatient.allergies.length > 0 ? currentPatient.allergies.map(a => `${a.name}${a.verifiedBy ? ' (verified)' : ''}`).join(', ') : 'None'}</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Emergency Summary: surgical complexities and important notes */}
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="bg-gradient-to-r from-red-900/20 via-red-800/15 to-red-900/20 backdrop-blur-lg border-2 border-red-500/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(239,68,68,0.15)]">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                <ShieldAlert className="h-6 w-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Emergency Summary</h3>
+                <p className="text-red-300/70 text-sm">Critical information for emergency responders</p>
+              </div>
+            </div>
+            <div className="space-y-3 mt-4">
+              <div className="p-4 bg-white/5 rounded-xl border border-red-500/20">
+                <div className="flex items-start gap-2">
+                  <Heart className="h-5 w-5 text-red-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-red-300 font-semibold mb-1">Known Allergies</p>
+                    <p className="text-white text-sm">
+                      {currentPatient.allergies && currentPatient.allergies.length > 0 ? (
+                        currentPatient.allergies.map((a, idx) => (
+                          <span key={idx} className="inline-block mr-2 mb-1">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-500/20 border border-red-500/30 rounded-lg">
+                              {a.name}
+                              {a.verifiedBy && <CheckCircle className="h-3 w-3 text-green-400" />}
+                            </span>
+                            {a.note && <span className="text-white/60 text-xs ml-1">({a.note})</span>}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-white/60">None reported</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl border border-red-500/20">
+                <div className="flex items-start gap-2">
+                  <Activity className="h-5 w-5 text-red-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-red-300 font-semibold mb-1">Surgical History</p>
+                    {currentPatient.surgicalHistory && currentPatient.surgicalHistory.length > 0 ? (
+                      <div className="space-y-2">
+                        {currentPatient.surgicalHistory.map((s, idx) => (
+                          <div key={idx} className="text-sm">
+                            <p className="text-white font-medium">{s.procedure}</p>
+                            <div className="flex items-center gap-2 text-white/60 text-xs mt-1">
+                              <span>{s.date}</span>
+                              <span>•</span>
+                              <span className={`px-2 py-0.5 rounded ${
+                                s.complexity === 'high' ? 'bg-red-500/20 text-red-300' :
+                                s.complexity === 'moderate' ? 'bg-yellow-500/20 text-yellow-300' :
+                                'bg-green-500/20 text-green-300'
+                              }`}>
+                                {s.complexity || 'unknown'} complexity
+                              </span>
+                            </div>
+                            {s.notes && <p className="text-white/60 text-xs mt-1">{s.notes}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-white/60 text-sm">No surgical history recorded</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { 
@@ -55,6 +56,19 @@ const roles = [
 
 export default function RoleSelection() {
   const router = useRouter()
+  const [particles, setParticles] = useState<Array<{ x: number; y: number; left: string; top: string }>>([])
+
+  useEffect(() => {
+    // Generate particle positions only on client side to avoid hydration mismatch
+    setParticles(
+      Array.from({ length: 50 }).map((_, i) => ({
+        x: Math.cos((i * Math.PI) / 25) * 400 + Math.random() * 200,
+        y: Math.sin((i * Math.PI) / 25) * 400 + Math.random() * 200,
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+      }))
+    )
+  }, [])
 
   const handleRoleSelect = (route: string) => {
     // In a real app, this would set authentication state
@@ -66,13 +80,13 @@ export default function RoleSelection() {
     <div className="min-h-screen bg-gradient-to-br from-[#0B0F0E] via-[#0F2E28] to-[#0B0F0E] relative overflow-hidden">
       {/* Background particles */}
       <div className="absolute inset-0">
-        {Array.from({ length: 50 }).map((_, i) => (
+        {particles.map((particle, i) => (
           <motion.div
             key={i}
             className="absolute w-1 h-1 bg-primary rounded-full opacity-20"
             animate={{
-              x: Math.cos((i * Math.PI) / 25) * 400 + Math.random() * 200,
-              y: Math.sin((i * Math.PI) / 25) * 400 + Math.random() * 200,
+              x: particle.x,
+              y: particle.y,
               opacity: [0.1, 0.3, 0.1],
             }}
             transition={{
@@ -81,8 +95,8 @@ export default function RoleSelection() {
               repeatType: "reverse",
             }}
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: particle.left,
+              top: particle.top,
             }}
           />
         ))}

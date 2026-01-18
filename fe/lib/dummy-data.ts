@@ -70,8 +70,20 @@ export interface Patient {
     relationship: string
   }
   medicalHistory: MedicalRecord[]
-  allergies: string[]
+  allergies: {
+    name: string
+    note?: string
+    verifiedBy?: string
+    verifiedAt?: string
+  }[]
   medications: string[]
+  surgicalHistory?: {
+    procedure: string
+    date: string
+    complexity?: 'low' | 'moderate' | 'high'
+    notes?: string
+    performedBy?: string
+  }[]
   bloodType: string
 }
 
@@ -188,9 +200,15 @@ export const patients: Patient[] = [
       relationship: "Spouse"
     },
     medicalHistory: [],
-    allergies: ["Penicillin", "Nuts"],
-    medications: ["Vitamin D", "Iron Supplements"],
-    bloodType: "O+"
+      allergies: [
+        { name: "Penicillin", note: "Rash and difficulty breathing historically", verifiedBy: "D001", verifiedAt: "2024-11-20" },
+        { name: "Nuts", note: "Mild hives" }
+      ],
+      medications: ["Vitamin D", "Iron Supplements"],
+      surgicalHistory: [
+        { procedure: "Appendectomy", date: "2018-06-12", complexity: 'low', notes: "Laparoscopic", performedBy: "D001" }
+      ],
+      bloodType: "O+"
   },
   {
     id: "P002",
@@ -206,8 +224,13 @@ export const patients: Patient[] = [
       relationship: "Wife"
     },
     medicalHistory: [],
-    allergies: ["Shellfish"],
+    allergies: [
+      { name: "Shellfish", note: "Severe reaction (anaphylaxis)", verifiedBy: "D002", verifiedAt: "2024-11-18" }
+    ],
     medications: ["Metformin"],
+    surgicalHistory: [
+      { procedure: "Knee Arthroscopy", date: "2021-03-04", complexity: 'moderate', notes: "Minor complications", performedBy: "D001" }
+    ],
     bloodType: "A+"
   }
 ]

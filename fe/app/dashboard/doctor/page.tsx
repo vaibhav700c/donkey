@@ -26,6 +26,58 @@ import {
 import { doctors, patients, medicalRecords, getDoctorPatients, Doctor, Patient, MedicalRecord } from "@/lib/dummy-data"
 import Navbar from "@/components/navbar"
 
+// Healthcare Icons for background particles (matching hero section)
+const HealthcareIcons = {
+  stethoscope: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1 3.5c-1.68 0-3.22.67-4.34 1.76C12.82 16.15 12 14.88 12 13.5V4c0-.55.45-1 1-1h1V1h-1c-1.65 0-3 1.35-3 3v9.5c0 2.76 2.24 5 5 5 .28 0 .5.22.5.5s-.22.5-.5.5c-2.21 0-4-1.79-4-4V11h2V4H4v7h2v4c0 3.31 2.69 6 6 6 1.66 0 3-1.34 3-3s-1.34-3-3-3z"/>
+    </svg>
+  ),
+  pulse: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M3 13h4l3-8 3 12 3-4h5v-2h-4l-2 2.5-3.5-10.5L8.5 15H3z"/>
+    </svg>
+  ),
+  medical: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z"/>
+    </svg>
+  ),
+  pill: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4.22 11.29l7.07-7.07c2.34-2.34 6.14-2.34 8.49 0 2.34 2.34 2.34 6.14 0 8.49l-7.07 7.07c-2.34 2.34-6.14 2.34-8.49 0-2.34-2.34-2.34-6.14 0-8.49zM5.64 12.71c-1.56 1.56-1.56 4.09 0 5.65 1.56 1.56 4.09 1.56 5.65 0l7.07-7.07c1.56-1.56 1.56-4.09 0-5.65-1.56-1.56-4.09-1.56-5.65 0l-7.07 7.07zM11 6.83l4.24 4.24-6.36 6.36L4.64 13.2 11 6.83z"/>
+    </svg>
+  ),
+}
+
+const healthIcons = Object.values(HealthcareIcons)
+const greenShades = ['#10B981', '#059669', '#047857', '#065F46', '#064E3B', '#34D399', '#6EE7B7', '#A7F3D0']
+
+const createDeterministicParticles = (count: number, seed: number) => {
+  const particles = []
+  for (let i = 0; i < count; i++) {
+    const x = ((Math.sin(i * 12.9898 + seed) * 43758.5453) % 1) * 100
+    const y = ((Math.cos(i * 78.233 + seed) * 43758.5453) % 1) * 100
+    const size = 16 + ((Math.sin(i * 7.91 + seed) * 43758.5453) % 1) * 24
+    const animationOffset = ((Math.sin(i * 15.23 + seed) * 43758.5453) % 1) * 100
+    const iconIndex = Math.floor(Math.abs(Math.sin(i * 9.87 + seed) * 43758.5453) % healthIcons.length)
+    const colorIndex = Math.floor(Math.abs(Math.sin(i * 6.54 + seed) * 43758.5453) % greenShades.length)
+    
+    particles.push({
+      id: i,
+      left: Math.abs(x),
+      top: Math.abs(y),
+      size: Math.abs(size),
+      animationOffset: Math.abs(animationOffset),
+      icon: healthIcons[iconIndex],
+      color: greenShades[colorIndex]
+    })
+  }
+  return particles
+}
+
+const healthParticles = createDeterministicParticles(20, 3)
+
 export default function DoctorDashboard() {
   const [currentDoctor, setCurrentDoctor] = useState<Doctor | null>(null)
   const [doctorPatients, setDoctorPatients] = useState<Patient[]>([])
@@ -42,6 +94,12 @@ export default function DoctorDashboard() {
   const [uploadDescription, setUploadDescription] = useState('')
   // Track which patients have access granted (using patient IDs)
   const [patientAccessGranted, setPatientAccessGranted] = useState<Set<string>>(new Set(['P001'])) // Demo: only Sarah Johnson has access
+  // Allergy modal state
+  const [showAllergyModal, setShowAllergyModal] = useState(false)
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+  const [allergyName, setAllergyName] = useState('')
+  const [allergyNote, setAllergyNote] = useState('')
+  const [allergySeverity, setAllergySeverity] = useState<'mild' | 'moderate' | 'severe'>('moderate')
 
   useEffect(() => {
     // In a real app, this would get the current authenticated doctor
@@ -104,6 +162,47 @@ export default function DoctorDashboard() {
   const handleRequestAccess = (patientId: string) => {
     setShowSnakeVibe(true)
     setTimeout(() => setShowSnakeVibe(false), 5000)
+  }
+
+  const handleAddAllergy = (patientId: string) => {
+    setSelectedPatientId(patientId)
+    setShowAllergyModal(true)
+  }
+
+  const handleSaveAllergy = () => {
+    if (!allergyName.trim() || !selectedPatientId) return
+
+    const note = allergyNote.trim() ? `${allergyNote.trim()} (${allergySeverity} severity)` : `${allergySeverity} severity`
+
+    // Update local state copy
+    setDoctorPatients(prev => prev.map(p => {
+      if (p.id === selectedPatientId) {
+        const updated = { ...p }
+        if (!updated.allergies) updated.allergies = []
+        updated.allergies = [{ name: allergyName.trim(), note, verifiedBy: currentDoctor?.id, verifiedAt: new Date().toISOString() }, ...updated.allergies]
+        return updated
+      }
+      return p
+    }))
+
+    // Also update global dummy data patients array for demo persistence
+    try {
+      const gp: any = (patients as any)
+      const idx = gp.findIndex((x: any) => x.id === selectedPatientId)
+      if (idx >= 0) {
+        if (!gp[idx].allergies) gp[idx].allergies = []
+        gp[idx].allergies.unshift({ name: allergyName.trim(), note, verifiedBy: currentDoctor?.id, verifiedAt: new Date().toISOString() })
+      }
+    } catch (e) {
+      // ignore in demo
+    }
+
+    // Reset and close
+    setAllergyName('')
+    setAllergyNote('')
+    setAllergySeverity('moderate')
+    setShowAllergyModal(false)
+    setSelectedPatientId(null)
   }
 
   const filteredPatients = doctorPatients.filter(patient =>
@@ -266,8 +365,43 @@ export default function DoctorDashboard() {
       </AnimatePresence>
 
       <Navbar userEmail={currentDoctor.email} userRole="Doctor" />
-      <div className="min-h-screen bg-gradient-to-br from-[#0B0F0E] via-[#0F2E28] to-[#0B0F0E]">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-[#0B0F0E] via-[#0F2E28] to-[#0B0F0E] relative overflow-hidden">
+        {/* Animated Healthcare Icon Particles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {healthParticles.map((particle) => (
+            <motion.div
+              key={`health-${particle.id}`}
+              className="absolute"
+              style={{
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                width: `${particle.size}px`,
+                height: `${particle.size}px`,
+                color: particle.color,
+                opacity: 0.15,
+                filter: `drop-shadow(0 0 3px ${particle.color})`,
+              }}
+              animate={{
+                y: [-30, 30, -30],
+                x: [-10, 10, -10],
+                rotate: [0, 15, -15, 0],
+                opacity: [0.1, 0.25, 0.1],
+                scale: [0.9, 1.1, 0.9],
+              }}
+              transition={{
+                duration: 10 + (particle.animationOffset * 0.08),
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+                delay: particle.animationOffset * 0.05,
+                ease: "easeInOut",
+              }}
+            >
+              {particle.icon}
+            </motion.div>
+          ))}
+        </div>
+        
+        <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
         <motion.div
           className="mb-8"
@@ -508,6 +642,12 @@ export default function DoctorDashboard() {
                           >
                             <Edit3 className="h-4 w-4 inline mr-2" />
                             Edit
+                          </button>
+                          <button
+                            onClick={() => handleAddAllergy(patient.id)}
+                            className="flex-1 py-2 bg-rose-500/10 text-rose-400 rounded-lg hover:bg-rose-500/20 transition-all"
+                          >
+                            Add Allergy
                           </button>
                         </div>
                       ) : (
@@ -785,6 +925,148 @@ export default function DoctorDashboard() {
               </div>
             </div>
           )}
+
+          {/* Add Allergy Modal */}
+          <AnimatePresence>
+            {showAllergyModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                onClick={() => setShowAllergyModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-gradient-to-br from-[#0B0F0E]/95 via-[#0F2E28]/95 to-[#0B0F0E]/95 border-2 border-primary/30 rounded-3xl p-8 max-w-2xl w-full mx-4 shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
+                        <ShieldAlert className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-white">Add Patient Allergy</h3>
+                        <p className="text-white/60 text-sm">Document verified allergy information</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowAllergyModal(false)}
+                      className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-colors"
+                    >
+                      <X className="h-5 w-5 text-white/70" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-5">
+                    {/* Allergy Name */}
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">
+                        Allergy Name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={allergyName}
+                        onChange={(e) => setAllergyName(e.target.value)}
+                        placeholder="e.g., Penicillin, Peanuts, Latex"
+                        className="w-full p-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* Severity Level */}
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-3">
+                        Severity Level
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <button
+                          onClick={() => setAllergySeverity('mild')}
+                          className={`p-4 rounded-xl border-2 transition-all ${
+                            allergySeverity === 'mild'
+                              ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300'
+                              : 'bg-white/5 border-white/10 text-white/60 hover:border-white/30'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl mb-1">⚠️</div>
+                            <div className="font-semibold">Mild</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setAllergySeverity('moderate')}
+                          className={`p-4 rounded-xl border-2 transition-all ${
+                            allergySeverity === 'moderate'
+                              ? 'bg-orange-500/20 border-orange-500/50 text-orange-300'
+                              : 'bg-white/5 border-white/10 text-white/60 hover:border-white/30'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl mb-1">🔶</div>
+                            <div className="font-semibold">Moderate</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setAllergySeverity('severe')}
+                          className={`p-4 rounded-xl border-2 transition-all ${
+                            allergySeverity === 'severe'
+                              ? 'bg-red-500/20 border-red-500/50 text-red-300'
+                              : 'bg-white/5 border-white/10 text-white/60 hover:border-white/30'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-2xl mb-1">🚨</div>
+                            <div className="font-semibold">Severe</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Additional Notes */}
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">
+                        Additional Notes (Optional)
+                      </label>
+                      <textarea
+                        value={allergyNote}
+                        onChange={(e) => setAllergyNote(e.target.value)}
+                        placeholder="Describe symptoms, previous reactions, or important details..."
+                        className="w-full p-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all h-24 resize-none"
+                      />
+                    </div>
+
+                    {/* Verified Badge */}
+                    <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/30 rounded-xl">
+                      <CheckCircle className="h-5 w-5 text-green-400" />
+                      <div className="flex-1">
+                        <p className="text-green-300 font-semibold text-sm">Verified by Licensed Doctor</p>
+                        <p className="text-green-300/70 text-xs">{currentDoctor?.name} • License: {currentDoctor?.license}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-8">
+                    <button
+                      onClick={() => setShowAllergyModal(false)}
+                      className="flex-1 py-4 bg-white/5 border border-white/20 text-white rounded-xl font-semibold hover:bg-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveAllergy}
+                      disabled={!allergyName.trim()}
+                      className="flex-1 py-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:shadow-[0_0_30px_rgba(0,255,178,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                    >
+                      Save Allergy
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Snake Vibe GIF Popup - Bottom Right Corner */}
           {showSnakeVibe && (
